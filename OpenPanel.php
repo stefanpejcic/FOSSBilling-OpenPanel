@@ -298,13 +298,26 @@ class Server_Manager_Openpanel extends Server_Manager
         return $username . $random_number;
     }
 
-    public function testConnection(): bool
-    {
-        // Makes login test connection. As we don't currently force JSON, OpenPanel will return HTML on a failed attempt, which causes the request to throw an error.
-        $this->request('');
+public function testConnection(): bool
+{   
+    $protocol = $this->_config['secure'] ? 'https://' : 'http://';
+    $url = $protocol . $this->_config['host'] . ':' . $this->getPort() . '/api/';
+    
+    try {
+        $response = $this->getHttpClient()->request('GET', $url);
+        $data = $response->getContent();
+        if (strpos($data, '{"message":"API is working!"}') !== false) {
+            return true;
+        } else {
+            throw new Server_Exception('Unexpected response from the server: ' . $data);
+        }
+    } catch (TransportExceptionInterface|HttpExceptionInterface $error) {
+        $exception = new Server_Exception('HttpClientException: :error', [':error' => $error->getMessage()]);
+        $this->getLog()->err($exception);
 
-        return true;
+        throw $exception;
     }
+}
 
 
     public function synchronizeAccount(Server_Account $account): Server_Account
