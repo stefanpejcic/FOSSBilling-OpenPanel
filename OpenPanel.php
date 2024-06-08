@@ -75,6 +75,118 @@ class Server_Manager_Openpanel extends Server_Manager
         $this->_config['port'] = empty($this->_config['port']) ? '2087' : $this->_config['port'];
     }
 
+
+
+
+
+
+
+
+
+
+
+    
+    
+    function getAuthToken($params) {
+        $apiProtocol = $this->_config['secure'] ? 'https://' : 'http://';
+        $host = $this->_config['host'];
+        $username = $this->_config['username'];
+        $password = $this->_config['password'];
+        $authEndpoint = $apiProtocol . $host . ':' . $this->getPort() . '/api/';
+               
+        // Prepare cURL request to authenticate
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $authEndpoint,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode(array(
+                'username' => $username,
+                'password' => $password
+            )),
+            CURLOPT_HTTPHEADER => array(
+                "Content-Type: application/json"
+            ),
+        ));
+    
+        // Execute cURL request to authenticate
+        $response = curl_exec($curl);
+    
+        // Check for errors
+        if (curl_errno($curl)) {
+            $token = false;
+            $error = "cURL Error: " . curl_error($curl);
+        } else {
+            // Decode the response JSON to get the token
+            $responseData = json_decode($response, true);
+            $token = isset($responseData['access_token']) ? $responseData['access_token'] : false;
+            $error = $token ? null : "Token not found in response";
+        }
+    
+        // Close cURL session
+        curl_close($curl);
+    
+        return array($token, $error);
+    }
+    
+    function apiRequest($endpoint, $token, $data = null, $method = 'POST') {
+        // Prepare cURL request
+        $curl = curl_init();
+        $options = array(
+            CURLOPT_URL => $endpoint,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => array(
+                "Authorization: Bearer " . $token,
+                "Content-Type: application/json"
+            ),
+        );
+    
+        if ($method === 'POST' && $data !== null) {
+            $options[CURLOPT_POST] = true;
+            $options[CURLOPT_POSTFIELDS] = json_encode($data);
+        } elseif ($method === 'DELETE') {
+            $options[CURLOPT_CUSTOMREQUEST] = 'DELETE';
+        }
+    
+        curl_setopt_array($curl, $options);
+    
+        // Execute cURL request
+        $response = curl_exec($curl);
+    
+        // Decode the response JSON
+        $responseData = json_decode($response, true);
+    
+        // Check for errors
+        if (curl_errno($curl)) {
+            $result = array("success" => false, "message" => "cURL Error: " . curl_error($curl));
+        } elseif ($responseData && isset($responseData['response']['message'])) {
+            $result = array("success" => true, "message" => $responseData['response']['message']);
+        } else {
+            $result = array("success" => false, "message" => "API request failed");
+        }
+    
+        // Close cURL session
+        curl_close($curl);
+    
+        return $result;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     /**
      * Returns the login URL for a OpenPanel account.
      *
@@ -194,7 +306,7 @@ class Server_Manager_Openpanel extends Server_Manager
 
         $result = $this->request($action, $varHash);
         if (!isset($result->acct[0])) {
-            error_log('Could not synchronize account with cPanel server. Account does not exist.');
+            error_log('Could not synchronize account with OpenPanel server. Account does not exist.');
 
             return $account;
         }
@@ -223,6 +335,16 @@ class Server_Manager_Openpanel extends Server_Manager
      */
     public function createAccount(Server_Account $account): bool
     {
+
+        list($jwtToken, $error) = $this->getAuthToken($params);
+
+    
+        if (!$jwtToken) {
+            return json_encode(array("success" => false, "message" => $error));
+        }
+
+        $createUserEndpoint = $protocol . $this->_config['host'] . ':' . $this->getPort() . '/api/users';
+        
         // Log the account creation
         $this->getLog()->info('Creating account ' . $account->getUsername());
 
@@ -231,7 +353,7 @@ class Server_Manager_Openpanel extends Server_Manager
         $package = $account->getPackage();
 
         // Check if the package exists on the OpenPanel server, create it if not
-        $this->checkPackageExists($package, true);
+        #########$this->checkPackageExists($package, true);
 
         // Prepare the parameters for the API request
         $action = 'createacct';
@@ -240,7 +362,7 @@ class Server_Manager_Openpanel extends Server_Manager
             'domain' => $account->getDomain(),
             'password' => $account->getPassword(),
             'contactemail' => $client->getEmail(),
-            'plan' => $this->getPackageName($package),
+            'plan_name' => $this->getPackageName($package),
             'useregns' => 0,
         ];
 
@@ -250,7 +372,11 @@ class Server_Manager_Openpanel extends Server_Manager
         }
 
         // Send the request to the OpenPanel API
-        $json = $this->request($action, $varHash);
+        $varHash['token'] = $jwtToken;
+        $json = $this->request($createUserEndpoint, $varHash);
+
+
+        
         $result = ($json->result[0]->status == 1);
 
         // If the account is a reseller account and was successfully created, set up the reseller and assign the ACL list
