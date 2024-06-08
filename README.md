@@ -8,7 +8,7 @@
 
 ## Installation
 
-- Download or git clone the CyberPanel.php file to your [FOSSBilling](https://github.com/FOSSBilling/FOSSBilling) installation at the following location: /library/Server/Manager
+- Download or git clone the OpenPanel.php file to your [FOSSBilling](https://github.com/FOSSBilling/FOSSBilling) installation at the following location: /library/Server/Manager
 
 ## Custom Package Values
 
@@ -20,7 +20,7 @@ ACL - By default this is set to user/reseller depending if the package choosen i
 - ✅ Verify Connection
 
 #### Website Functions
-- ❌ Create Website (This will also create the user in CyberPanel)
+- ❌ Create Website (This will also create the user in OpenPanel)
 - ❌ Change Website Package
 - ❌ Suspend/Un-suspend Website
 
