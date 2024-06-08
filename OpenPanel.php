@@ -13,7 +13,7 @@ use Random\RandomException;
 use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 
 /**
- * cPanel API.
+ * OpenPanel API.
  *
  * @see https://dev.openpanel.co/api/
  */
@@ -60,15 +60,15 @@ class Server_Manager_Openpanel extends Server_Manager
     public function init(): void
     {
         if (empty($this->_config['host'])) {
-            throw new Server_Exception('The ":server_manager" server manager is not fully configured. Please configure the :missing', [':server_manager' => 'cPanel OpenPanel', ':missing' => 'hostname'], 2001);
+            throw new Server_Exception('The ":server_manager" server manager is not fully configured. Please configure the :missing', [':server_manager' => 'OpenPanel', ':missing' => 'hostname'], 2001);
         }
 
         if (empty($this->_config['username'])) {
-            throw new Server_Exception('The ":server_manager" server manager is not fully configured. Please configure the :missing', [':server_manager' => 'cPanel OpenPanel', ':missing' => 'username'], 2001);
+            throw new Server_Exception('The ":server_manager" server manager is not fully configured. Please configure the :missing', [':server_manager' => 'OpenPanel', ':missing' => 'username'], 2001);
         }
 
         if (empty($this->_config['password']) && empty($this->_config['accesshash'])) {
-            throw new Server_Exception('The ":server_manager" server manager is not fully configured. Please configure the :missing', [':server_manager' => 'cPanel OpenPanel', ':missing' => 'authentication credentials'], 2001);
+            throw new Server_Exception('The ":server_manager" server manager is not fully configured. Please configure the :missing', [':server_manager' => 'OpenPanel', ':missing' => 'authentication credentials'], 2001);
         }
 
         // If port not set, use OpenPanel default.
@@ -76,7 +76,7 @@ class Server_Manager_Openpanel extends Server_Manager
     }
 
     /**
-     * Returns the login URL for a cPanel account.
+     * Returns the login URL for a OpenPanel account.
      *
      * @param Server_Account|null $account The account for which to get the login URL. This parameter is currently not used.
      *
@@ -85,12 +85,13 @@ class Server_Manager_Openpanel extends Server_Manager
     public function getLoginUrl(Server_Account $account = null): string
     {
         $host = $this->_config['host'];
+        $protocol = $this->_config['secure'] ? 'https://' : 'http://';
 
-        return 'http://' . $host . '/cpanel';
+        return $protocol . $host . '/openpanel';
     }
 
     /**
-     * Returns the login URL for a OpenPanel reseller account.
+     * Returns the login URL for a OpenAdmin reseller account.
      *
      * @param Server_Account|null $account The account for which to get the login URL. This parameter is currently not used.
      *
@@ -99,8 +100,10 @@ class Server_Manager_Openpanel extends Server_Manager
     public function getResellerLoginUrl(Server_Account $account = null): string
     {
         $host = $this->_config['host'];
+        $protocol = $this->_config['secure'] ? 'https://' : 'http://';
+        $url = $protocol . $this->_config['host'] . ':' . $this->getPort() . '/api/';
 
-        return 'http://' . $host . '/openpanel';
+        return $protocol . $host . '/openpanel';
     }
 
     # OpenAdmin can use custom port
@@ -165,11 +168,6 @@ class Server_Manager_Openpanel extends Server_Manager
         // OpenPanel doesn't allow usernames to start with "test", so replace it with a random string if it does (test3456 would then become something like a62f93456).
         if (str_starts_with($username, 'test')) {
             $username = substr_replace($username, 'a' . bin2hex(random_bytes(2)), 0, 5);
-        }
-
-        // OpenPanel doesn't allow usernames to start with a number, so automatically append the letter 'a' to the start of a username that does.
-        if (is_numeric(substr($username, 0, 1))) {
-            $username = substr_replace($username, 'a', 0, 1);
         }
 
         return $username;
