@@ -10,10 +10,6 @@
 
 - Download or git clone the OpenPanel.php file to your [FOSSBilling](https://github.com/FOSSBilling/FOSSBilling) installation at the following location: /library/Server/Manager
 
-## Custom Package Values
-
-ACL - By default this is set to user/reseller depending if the package choosen is a normal hosting or reseller hosting, but you may override it in your package by setting a ACL custom value in the package.
-
 
 ## Features
 #### Server
