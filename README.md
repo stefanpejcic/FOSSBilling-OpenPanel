@@ -18,7 +18,11 @@ ACL - By default this is set to user/reseller depending if the package choosen i
 ## Features
 #### Server
 - ✅ Verify Connection
+- ✅ Create account
+- ✅ Cancel account
 - ✅ Suspend/Unsuspend account
+- ✅ Change account package
+- ✅ Change account password
 
 #### Website Functions
 - ❌ Create Website (This will also create the user in OpenPanel)
