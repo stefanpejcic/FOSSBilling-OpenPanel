@@ -1,7 +1,7 @@
 # FOSSBilling-OpenPanel Server Manager
 
 > [!NOTE]  
-> Tested with [FOSSBilling](https://github.com/FOSSBilling/FOSSBilling) v0.6.20
+> Tested with [FOSSBilling](https://github.com/FOSSBilling/FOSSBilling) v0.6.22
 > 
 
 
