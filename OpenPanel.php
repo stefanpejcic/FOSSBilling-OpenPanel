@@ -156,15 +156,14 @@ class Server_Manager_Openpanel extends Server_Manager
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_POSTFIELDS => $data,
             CURLOPT_HTTPHEADER => array(
                 'Content-Type: application/json',
                 'Authorization: Bearer ' . $token
             ),
         ));
       
-        if ($method === 'PATCH' && $data !== null) {
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-        }
+        
       
         $response = curl_exec($curl);
       
@@ -340,9 +339,30 @@ class Server_Manager_Openpanel extends Server_Manager
      *
      * @throws Server_Exception if an error occurs during the request, or if the response from the OpenPanel server indicates an error
      */
-    public function createAccount(Server_Account $account): bool
+    public function createAccount(Server_Account $account)
     {
-        return true;
+        $client = $account->getClient();
+        $package = $account->getPackage();
+        $this->getLog()->info('Creating account ' . $client->getUsername());
+        $data = json_encode(array(
+            "email" => $client->getEmail(),
+            'username' => $account->getUsername(),
+            'password' => $account->getPassword(),
+            "plan_name" => $package->getName()
+
+        ));
+
+        $response = $this->makeApiRequest("users" , $data, 'POST');
+        $response = json_decode($response);
+
+
+
+        if ($response->success == true) {
+            return true;    
+        
+        }
+
+        return false;
     }
         
         /**
@@ -411,15 +431,7 @@ class Server_Manager_Openpanel extends Server_Manager
         // Log the cancellation
         $this->getLog()->info('Canceling account ' . $account->getUsername());
 
-        // Define the action and parameters for the API request
-        $action = 'removeacct';
-        $varHash = [
-            'user' => $account->getUsername(),
-            'keepdns' => 0,
-        ];
-
-        // Send the request to the OpenPanel API
-        $this->request($action, $varHash);
+        
 
         return true;
     }
@@ -436,6 +448,7 @@ class Server_Manager_Openpanel extends Server_Manager
      */
     public function changeAccountPackage(Server_Account $account, Server_Package $package): bool
     {
+        
         // Log the package change
         $this->getLog()->info('Changing account ' . $account->getUsername() . ' package');
 
