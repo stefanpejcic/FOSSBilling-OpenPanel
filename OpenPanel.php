@@ -201,7 +201,7 @@ class Server_Manager_Openpanel extends Server_Manager
         $host = $this->_config['host'];
         $protocol = $this->_config['secure'] ? 'https://' : 'http://';
 
-        return $protocol . $host . '/openpanel';
+        return $protocol . $host . ':2083';
     }
 
     /**
@@ -217,7 +217,7 @@ class Server_Manager_Openpanel extends Server_Manager
         $protocol = $this->_config['secure'] ? 'https://' : 'http://';
         $url = $protocol . $this->_config['host'] . ':' . $this->getPort() . '/api/';
 
-        return $protocol . $host . '/openpanel';
+        return $protocol . $host . ':2087';
     }
 
     # OpenAdmin can use custom port
