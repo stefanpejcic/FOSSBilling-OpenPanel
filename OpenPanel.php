@@ -83,51 +83,68 @@ class Server_Manager_Openpanel extends Server_Manager
 
 
 
+function getAuthToken() {
+    $apiProtocol = $this->_config['secure'] ? 'https://' : 'http://';
+    $host = $this->_config['host'];
+    $username = $this->_config['username'];
+    $password = $this->_config['password'];
+    $port = $this->getPort();
+    $authEndpoint = "{$apiProtocol}{$host}:{$port}/api/";
+
+    //error_log("Username: $username");
+
+    $postData = json_encode(array(
+        'username' => $username,
+        'password' => $password
+    ));
+
+    $curl = curl_init();
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => $authEndpoint,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_SSL_VERIFYHOST => 0,
+        CURLOPT_SSL_VERIFYPEER => 0,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $postData,
+        CURLOPT_HTTPHEADER => array(
+            "Content-Type: application/json"
+        ),
+        CURLOPT_TIMEOUT => 10,
+    ));
+
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    //error_log("HTTP Status Code: $httpCode");
+
+    if (curl_errno($curl)) {
+        $error = "cURL Error: " . curl_error($curl);
+        error_log($error);
+        $token = false;
+    } else {
+        //error_log("Raw Response: $response");
+        $responseData = json_decode($response, true);
+        //error_log("Decoded response: " . print_r($responseData, true));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON Decode Error: " . json_last_error_msg());
+            curl_close($curl);
+            return false;
+        }
+
+        $token = isset($responseData['access_token']) ? $responseData['access_token'] : false;
+        
+        if (!$token) {
+            error_log("API is working, but JWT not found in response!");
+        }
+        //error_log("JWT: " . $token);
+    }
+
+    curl_close($curl);
+    return $token;
+}
 
     
     
-    function getAuthToken() {
-        $apiProtocol = $this->_config['secure'] ? 'https://' : 'http://';
-        $host = $this->_config['host'];
-        $username = $this->_config['username'];
-        $password = $this->_config['password'];
-        $authEndpoint = $apiProtocol . $host . ':' . $this->getPort() . '/api/';
-               
-        // Prepare cURL request to authenticate
-        $curl = curl_init();
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => $authEndpoint,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode(array(
-                'username' => $username,
-                'password' => $password
-            )),
-            CURLOPT_HTTPHEADER => array(
-                "Content-Type: application/json"
-            ),
-        ));
-    
-        // Execute cURL request to authenticate
-        $response = curl_exec($curl);
-    
-        // Check for errors
-        if (curl_errno($curl)) {
-            $token = false;
-            $error = "cURL Error: " . curl_error($curl);
-        } else {
-            // Decode the response JSON to get the token
-            $responseData = json_decode($response, true);
-            $token = isset($responseData['access_token']) ? $responseData['access_token'] : false;
-            $error = $token ? null : "Token not found in response";
-        }
-    
-        // Close cURL session
-        curl_close($curl);
-    
-        return $token;
-    }
-    
+
 function makeApiRequest($endpoint, $data = null, $method = 'GET') {
     $apiProtocol = $this->_config['secure'] ? 'https://' : 'http://';
     $host = $this->_config['host'];
@@ -135,9 +152,12 @@ function makeApiRequest($endpoint, $data = null, $method = 'GET') {
 
     $url = $baseUrl . $endpoint;
 
+    error_log("URL: $url");
+
     $token = $this->getAuthToken();
-     
+        
     if (!$token) {
+        error_log("Failed to retrieve auth token");
         return false;
     }
   
@@ -153,6 +173,7 @@ function makeApiRequest($endpoint, $data = null, $method = 'GET') {
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         CURLOPT_CUSTOMREQUEST => $method,
         CURLOPT_POSTFIELDS => $data,
+        //CURLOPT_RESOLVE => array("HOST_HERE:PORT_HERE:IP_HERE"),
         CURLOPT_HTTPHEADER => array(
             'Content-Type: application/json',
             'Authorization: Bearer ' . $token
@@ -246,7 +267,7 @@ public function testConnection(): bool
 
     // Make the API request
     $response = $this->makeApiRequest(null);
-
+        
     if (!$response) {
         // Log the error and include the URL in the exception message
         throw new Server_Exception("Can't connect to $url Possible invalid credentials or unreachable host.");
