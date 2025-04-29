@@ -14,8 +14,7 @@ use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 
 /**
  * OpenPanel API.
- *
- * @see https://dev.openpanel.co/api/
+ * @see https://dev.openpanel.com/api/
  */
 class Server_Manager_Openpanel extends Server_Manager
 {
@@ -35,14 +34,14 @@ class Server_Manager_Openpanel extends Server_Manager
                             'name' => 'username',
                             'type' => 'text',
                             'label' => 'Username',
-                            'placeholder' => 'Username used to connect to the server',
+                            'placeholder' => 'Username used to login to OpenAdmin',
                             'required' => true,
                         ],
                         [
                             'name' => 'password',
-                            'type' => 'text',
-                            'label' => 'Password / Login Key',
-                            'placeholder' => 'Password or login key used to connect to the server',
+                            'type' => 'password',
+                            'label' => 'Password',
+                            'placeholder' => 'Password for the OpenAdmin user',
                             'required' => true,
                         ],
                     ],
@@ -129,49 +128,47 @@ class Server_Manager_Openpanel extends Server_Manager
         return $token;
     }
     
-    function makeApiRequest($endpoint, $data = null, $method = 'GET') {
-        $apiProtocol = $this->_config['secure'] ? 'https://' : 'http://';
-        $host = $this->_config['host'];
-        $baseUrl = $apiProtocol . $host . ':' . $this->getPort() . '/api/';
-               
+function makeApiRequest($endpoint, $data = null, $method = 'GET') {
+    $apiProtocol = $this->_config['secure'] ? 'https://' : 'http://';
+    $host = $this->_config['host'];
+    $baseUrl = $apiProtocol . $host . ':' . $this->getPort() . '/api/';
 
+    $url = $baseUrl . $endpoint;
+    
+    // Log the request URL for debugging purposes
+    error_log("Request URL: $url");
 
-        $url = $baseUrl . $endpoint;
-      
-        $token = $this->getAuthToken();
-         
-        if (!$token) {
-            error_log("Failed to retrieve auth token");
-            return false;
-        }
-      
-        $curl = curl_init();
-      
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_POSTFIELDS => $data,
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token
-            ),
-        ));
-      
-        
-      
-        $response = curl_exec($curl);
-      
-        curl_close($curl);
-          
-        return $response;
-      }
-      
+    $token = $this->getAuthToken();
+     
+    if (!$token) {
+        error_log("Failed to retrieve auth token");
+        return false;
+    }
+  
+    $curl = curl_init();
+  
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_POSTFIELDS => $data,
+        CURLOPT_HTTPHEADER => array(
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token
+        ),
+    ));
+
+    $response = curl_exec($curl);
+    curl_close($curl);
+
+    return $response;
+}
+
       
 
 
@@ -237,25 +234,41 @@ class Server_Manager_Openpanel extends Server_Manager
     
     /**
      * Tests the connection to the OpenPanel server.
-     * Sends a request to the OpenPanel server to get its version.
+     * Sends a request to the OpenPanel server to check if api is working
      *
      * @return true if the connection was successful
      *
      * @throws Server_Exception if an error occurs during the request
      */
-    public function testConnection(): bool
-    {   
-        
+public function testConnection(): bool
+{
+    // Construct the request URL directly
+    $apiProtocol = $this->_config['secure'] ? 'https://' : 'http://';
+    $host = $this->_config['host'];
+    $baseUrl = $apiProtocol . $host . ':' . $this->getPort() . '/api/';
+    $url = $baseUrl;  // As no endpoint is provided, it's just the base URL
 
-        $response = $this->makeApiRequest(null);
-        $response = json_decode($response);
+    // Make the API request
+    $response = $this->makeApiRequest(null);
 
-        if($response->message === "API is working!") {
-            return true;
-        }
-        throw new Server_Exception('Can\'t connect to the server');
-        return false;
+    if (!$response) {
+        // Log the error and include the URL in the exception message
+        throw new Server_Exception("Can't connect to $url Possible invalid credentials or unreachable host.");
     }
+
+    $decoded = json_decode($response);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Server_Exception("Can't connect to the server: Invalid JSON - " . json_last_error_msg() . ". Response was: " . $response);
+    }
+
+    if (isset($decoded->message) && $decoded->message === "API is working!") {
+        return true;
+    }
+
+    $errorMessage = isset($decoded->message) ? $decoded->message : 'Unexpected API response';
+    throw new Server_Exception("Can't connect to the server: {$errorMessage}. Full response: " . json_encode($decoded));
+}
+
 
     /**
      * Generates a username for a new account on the OpenPanel server.
