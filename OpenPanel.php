@@ -134,14 +134,10 @@ function makeApiRequest($endpoint, $data = null, $method = 'GET') {
     $baseUrl = $apiProtocol . $host . ':' . $this->getPort() . '/api/';
 
     $url = $baseUrl . $endpoint;
-    
-    // Log the request URL for debugging purposes
-    error_log("Request URL: $url");
 
     $token = $this->getAuthToken();
      
     if (!$token) {
-        error_log("Failed to retrieve auth token");
         return false;
     }
   
