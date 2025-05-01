@@ -348,17 +348,22 @@ public function testConnection(): bool
             "plan_name" => $package->getName()
 
         ));
+    
 
-        $response = $this->makeApiRequest("users" , $data, 'POST');
-        $response = json_decode($response);
-
-
-        if (!empty($response->success)) {
+        $rawResponse = $this->makeApiRequest("users", $data, 'POST');
+        $response = json_decode($rawResponse);
+    
+        if (is_object($response) && !empty($response->success)) {
             return true;
-        
         }
-        
-        throw new Server_Exception('Error when creating ' . $client->getUsername() . ': ' . $response->error);
+    
+        // https://github.com/stefanpejcic/FOSSBilling-OpenPanel/issues/2
+        if (strpos($rawResponse, 'Successfully added user') !== false) {
+            return true;
+        }
+    
+        $errorMsg = is_object($response) && isset($response->error) ? $response->error : $rawResponse;
+        throw new Server_Exception('Error when creating ' . $client->getUsername() . ': ' . $errorMsg);
         
     }
         
