@@ -530,7 +530,8 @@ public function testConnection(): bool
      */
     public function changeAccountUsername(Server_Account $account, string $newUsername): bool
     {
-        throw new Server_Exception('OpenPanel does not supporting changing username');
+
+        throw new Server_Exception('Error: Changing username is not enabled on OpenPanel server.');
     }
 
     /**
@@ -545,7 +546,7 @@ public function testConnection(): bool
      */
     public function changeAccountDomain(Server_Account $account, string $newDomain): bool
     {
-        throw new Server_Exception('OpenPanel does not supporting account domain');
+        throw new Server_Exception('Error: OpenPanel does not have a concept of primary domains.');
 
     }
 
